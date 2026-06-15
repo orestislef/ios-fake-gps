@@ -1,0 +1,5 @@
+sidecar/venv/
+macapp/.build/
+macapp/.swiftpm/
+.DS_Store
+*.log
