@@ -8,3 +8,4 @@ __pycache__/
 *.spec
 .DS_Store
 *.log
+assets/AppIcon.iconset/

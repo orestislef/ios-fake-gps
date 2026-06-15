@@ -1,4 +1,10 @@
-# iOS Fake GPS — a Lockito-style location simulator for iPhone
+<p align="center">
+  <img src="assets/icon_1024.png" alt="iOS Fake GPS icon" width="160" height="160">
+</p>
+
+<h1 align="center">iOS Fake GPS</h1>
+
+<p align="center">A Lockito-style location simulator for iPhone</p>
 
 Simulate a static location **or** a moving route (with adjustable speed, looping
 and GPS jitter) on a **non-jailbroken** iPhone, driven from a native macOS app.
@@ -57,6 +63,8 @@ it yourself from source and the manual command-line route.
 - **Live position marker** showing exactly where the device currently reports it
   is, plus distance and ETA readouts.
 - **One-click reset** back to the device's real GPS.
+- **Auto-reset on exit** — disconnecting or quitting the app restores the phone's
+  real location automatically, so you never get left on a fake position.
 
 ## How it works
 

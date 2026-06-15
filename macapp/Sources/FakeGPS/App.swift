@@ -1,7 +1,23 @@
+import AppKit
 import SwiftUI
+
+/// Ensures the device location is reset to real GPS when the app quits, and that
+/// closing the window actually quits the app (so that cleanup runs).
+final class AppDelegate: NSObject, NSApplicationDelegate {
+    var onTerminate: (() -> Void)?
+
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        true
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        onTerminate?()
+    }
+}
 
 @main
 struct FakeGPSApp: App {
+    @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var config: AppConfig
     @StateObject private var sidecar: Sidecar
     @StateObject private var engine: SimulationEngine
@@ -28,6 +44,12 @@ struct FakeGPSApp: App {
                 .environmentObject(sidecar)
                 .environmentObject(engine)
                 .environmentObject(tunnel)
+                .onAppear {
+                    let sc = sidecar
+                    appDelegate.onTerminate = {
+                        MainActor.assumeIsolated { sc.shutdownBlocking() }
+                    }
+                }
         }
         .windowResizability(.contentSize)
     }

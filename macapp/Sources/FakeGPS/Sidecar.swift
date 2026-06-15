@@ -105,9 +105,33 @@ final class Sidecar: ObservableObject {
 
     func stop() {
         if let proc = process, proc.isRunning {
+            // Reset the device to real GPS first, then ask the helper to quit.
+            // Don't SIGTERM immediately — that races the clear. Close stdin so it
+            // exits cleanly, and force-kill only if it lingers.
+            send(["cmd": "clear"])
             send(["cmd": "quit"])
-            proc.terminate()
+            try? stdinPipe?.fileHandleForWriting.close()
+            DispatchQueue.global().asyncAfter(deadline: .now() + 2) {
+                if proc.isRunning { proc.terminate() }
+            }
         }
+        resetState()
+    }
+
+    /// Blocking cleanup used on app termination: clear the location and wait
+    /// (bounded) for the helper to exit, so quitting always restores real GPS.
+    func shutdownBlocking() {
+        guard let proc = process, proc.isRunning else { return }
+        send(["cmd": "clear"])
+        send(["cmd": "quit"])
+        try? stdinPipe?.fileHandleForWriting.close()
+        let deadline = Date().addingTimeInterval(2)
+        while proc.isRunning && Date() < deadline { usleep(50_000) }
+        if proc.isRunning { proc.terminate() }
+        resetState()
+    }
+
+    private func resetState() {
         process = nil
         stdinPipe = nil
         stdoutBuffer.removeAll()

@@ -33,6 +33,9 @@ rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources/runtime"
 cp "$SWIFT_BIN" "$APP/Contents/MacOS/FakeGPS"
 cp -R dist_pyi/fakegps-runtime/. "$APP/Contents/Resources/runtime/"
+if [ -f assets/AppIcon.icns ]; then
+  cp assets/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
+fi
 
 cat > "$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
@@ -42,6 +45,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>CFBundleName</key><string>FakeGPS</string>
   <key>CFBundleDisplayName</key><string>iOS Fake GPS</string>
   <key>CFBundleExecutable</key><string>FakeGPS</string>
+  <key>CFBundleIconFile</key><string>AppIcon</string>
   <key>CFBundleIdentifier</key><string>io.github.orestislef.ios-fake-gps</string>
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>CFBundleShortVersionString</key><string>${VERSION}</string>
