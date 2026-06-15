@@ -38,30 +38,27 @@ final class Sidecar: ObservableObject {
     @Published private(set) var state: SidecarState = .stopped
     @Published private(set) var lastError: String?
 
-    /// Path to the venv's python interpreter and the helper script.
-    var pythonURL: URL
-    var scriptURL: URL
+    /// Executable to launch and the leading args (e.g. the frozen runtime with
+    /// ["sidecar"], or python with [scriptPath]).
+    var executableURL: URL
+    var argsPrefix: [String]
 
     private var process: Process?
     private var stdinPipe: Pipe?
     private var stdoutBuffer = Data()
     private var messageID = 0
 
-    init(pythonURL: URL, scriptURL: URL) {
-        self.pythonURL = pythonURL
-        self.scriptURL = scriptURL
+    init(executableURL: URL, argsPrefix: [String]) {
+        self.executableURL = executableURL
+        self.argsPrefix = argsPrefix
     }
 
     // MARK: - Lifecycle
 
     func start(udid: String? = nil) {
         stop()
-        guard FileManager.default.isExecutableFile(atPath: pythonURL.path) else {
-            state = .failed("Python not found at \(pythonURL.path). Run the sidecar setup.")
-            return
-        }
-        guard FileManager.default.fileExists(atPath: scriptURL.path) else {
-            state = .failed("Sidecar script not found at \(scriptURL.path).")
+        guard FileManager.default.isExecutableFile(atPath: executableURL.path) else {
+            state = .failed("Runtime not found at \(executableURL.path).")
             return
         }
 
@@ -69,8 +66,8 @@ final class Sidecar: ObservableObject {
         lastError = nil
 
         let proc = Process()
-        proc.executableURL = pythonURL
-        var args = [scriptURL.path]
+        proc.executableURL = executableURL
+        var args = argsPrefix
         if let udid { args += ["--udid", udid] }
         proc.arguments = args
 

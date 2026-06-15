@@ -11,10 +11,11 @@ final class TunnelManager: ObservableObject {
     @Published private(set) var isUp = false
 
     private var pollTimer: Timer?
-    let pythonBinDir: () -> URL // directory containing the venv's pymobiledevice3
+    /// Returns (executablePath, args) for launching the tunnel daemon.
+    let tunneldCommand: () -> (path: String, args: [String])
 
-    init(pythonBinDir: @escaping () -> URL) {
-        self.pythonBinDir = pythonBinDir
+    init(tunneldCommand: @escaping () -> (path: String, args: [String])) {
+        self.tunneldCommand = tunneldCommand
         startPolling()
     }
 
@@ -42,15 +43,19 @@ final class TunnelManager: ObservableObject {
 
     /// Launch tunneld with administrator privileges. Shows the macOS auth dialog.
     /// Runs detached so it keeps managing tunnels after this call returns.
+    static let logPath = "/tmp/ios-fake-gps-tunneld.log"
+
     func startTunneld() {
-        // Invoke via `python -m pymobiledevice3` rather than the console script:
-        // it's immune to a stale shebang if the venv was relocated, and the venv
-        // must live OUTSIDE ~/Documents or root (TCC) can't read it.
-        let python = pythonBinDir().appendingPathComponent("python").path
-        // `do shell script ... &` is reaped when the privileged session ends, so
-        // detach with nohup + setsid-style disown via `&` after redirecting I/O.
-        let shell = "nohup '\(python)' -m pymobiledevice3 remote tunneld "
-            + "> /tmp/ios-fake-gps-tunneld.log 2>&1 &"
+        let (path, args) = tunneldCommand()
+        let quotedArgs = args.map { "'\($0)'" }.joined(separator: " ")
+        // Fully detach the daemon so it survives the privileged osascript session
+        // ending. `nohup` fails here ("can't detach from console" — no tty), and
+        // a plain `&` child can be reaped with the session, so we use perl's
+        // setsid to start a brand-new session, then exec the daemon. Output goes
+        // to a log file; `&` returns control to osascript immediately.
+        let inner = "/usr/bin/perl -MPOSIX -e 'setsid or exit 1; exec @ARGV' "
+            + "'\(path)' \(quotedArgs)"
+        let shell = "\(inner) </dev/null >\(Self.logPath) 2>&1 &"
         let escaped = shell.replacingOccurrences(of: "\"", with: "\\\"")
         let script = "do shell script \"\(escaped)\" with administrator privileges"
 

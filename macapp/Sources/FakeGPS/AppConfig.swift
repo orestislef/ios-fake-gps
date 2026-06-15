@@ -1,45 +1,80 @@
 import Foundation
 
-/// Resolves where the Python sidecar lives. Defaults assume the standard repo
-/// layout (…/ios-fake-gps/sidecar) but are user-overridable and persisted.
+/// How the Python side (sidecar + tunnel daemon) is provided.
+enum RuntimeKind {
+    /// A standalone PyInstaller binary shipped inside FakeGPS.app. No Python
+    /// install needed on the machine.
+    case bundled(URL)
+    /// A development setup: the venv's python running the source scripts.
+    case dev(python: URL, script: URL)
+}
+
+/// Resolves how to launch the sidecar and the tunnel daemon.
+///
+/// When running as a packaged app (FakeGPS.app), it uses the frozen
+/// `fakegps-runtime` binary in `Contents/Resources/runtime`. When running via
+/// `swift run` during development, it falls back to the venv in `~/.ios-fake-gps`.
 @MainActor
 final class AppConfig: ObservableObject {
-    @Published var sidecarRoot: URL { didSet { persist() } }
-
-    private static let key = "sidecarRoot"
+    let runtime: RuntimeKind
 
     init() {
-        if let saved = UserDefaults.standard.url(forKey: Self.key) {
-            sidecarRoot = saved
-        } else {
-            sidecarRoot = Self.guessRoot()
+        self.runtime = Self.resolve()
+    }
+
+    private static func resolve() -> RuntimeKind {
+        if let res = Bundle.main.resourceURL {
+            let frozen = res.appendingPathComponent("runtime/fakegps-runtime")
+            if FileManager.default.isExecutableFile(atPath: frozen.path) {
+                return .bundled(frozen)
+            }
+        }
+        let home = FileManager.default.homeDirectoryForCurrentUser
+        let venvPython = home.appendingPathComponent(".ios-fake-gps/venv/bin/python")
+        let script = home.appendingPathComponent(".ios-fake-gps/gpsd_helper.py")
+        return .dev(python: venvPython, script: script)
+    }
+
+    // MARK: - Sidecar launch
+
+    /// (executable, leading args) for running the sidecar. Append e.g. `--udid X`.
+    var sidecarLaunch: (executable: URL, args: [String]) {
+        switch runtime {
+        case let .bundled(bin):
+            return (bin, ["sidecar"])
+        case let .dev(python, script):
+            return (python, [script.path])
         }
     }
 
-    var pythonURL: URL { sidecarRoot.appendingPathComponent("venv/bin/python") }
-    var scriptURL: URL { sidecarRoot.appendingPathComponent("gpsd_helper.py") }
+    // MARK: - Tunnel daemon launch (used by an admin osascript shell)
+
+    /// (executablePath, args) for `… remote tunneld`.
+    var tunneldLaunch: (path: String, args: [String]) {
+        switch runtime {
+        case let .bundled(bin):
+            return (bin.path, ["tunneld"])
+        case let .dev(python, _):
+            return (python.path, ["-m", "pymobiledevice3", "remote", "tunneld"])
+        }
+    }
+
+    // MARK: - Validity
 
     var isValid: Bool {
-        FileManager.default.isExecutableFile(atPath: pythonURL.path)
-            && FileManager.default.fileExists(atPath: scriptURL.path)
+        switch runtime {
+        case let .bundled(bin):
+            return FileManager.default.isExecutableFile(atPath: bin.path)
+        case let .dev(python, script):
+            return FileManager.default.isExecutableFile(atPath: python.path)
+                && FileManager.default.fileExists(atPath: script.path)
+        }
     }
 
-    private func persist() {
-        UserDefaults.standard.set(sidecarRoot, forKey: Self.key)
-    }
-
-    /// Best-effort guess for the runtime root (venv + gpsd_helper.py).
-    ///
-    /// We default to a dot-folder in $HOME — NOT ~/Documents — because the
-    /// privileged `tunneld` daemon runs as root, and macOS TCC blocks root from
-    /// reading Documents/Desktop/Downloads. A home dot-folder is root-readable.
-    private static func guessRoot() -> URL {
-        let home = FileManager.default.homeDirectoryForCurrentUser
-        let runtime = home.appendingPathComponent(".ios-fake-gps")
-        if FileManager.default.fileExists(atPath: runtime.path) { return runtime }
-        // Legacy fallback (works for the GUI sidecar, but tunneld won't from here).
-        let docs = home.appendingPathComponent("Documents/ios-fake-gps/sidecar")
-        if FileManager.default.fileExists(atPath: docs.path) { return docs }
-        return runtime
+    var locationDescription: String {
+        switch runtime {
+        case let .bundled(bin): return bin.deletingLastPathComponent().path
+        case let .dev(python, _): return python.deletingLastPathComponent().path
+        }
     }
 }

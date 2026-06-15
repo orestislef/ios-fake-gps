@@ -17,6 +17,31 @@ device.
 > location-based access controls breaks those services' terms — and possibly the
 > law.
 
+## Download
+
+Grab the latest prebuilt app from the
+[**Releases**](https://github.com/orestislef/ios-fake-gps/releases) page. The
+`.app` already has the Python engine bundled inside it, so you don't need to
+install Python or anything else.
+
+1. Download `FakeGPS-macos-arm64.zip` and unzip it.
+2. Drag **FakeGPS.app** into your **Applications** folder.
+3. The first time you open it, macOS will warn that it's from an unidentified
+   developer (the app isn't notarized). **Right-click the app → Open**, then
+   confirm. You only have to do this once. If it still refuses, run:
+   ```bash
+   xattr -dr com.apple.quarantine /Applications/FakeGPS.app
+   ```
+4. Open the app, click **Start tunnel (admin)…** (it asks for your password
+   once), plug in your iPhone, and hit **Connect**.
+
+That's it — no Terminal needed for normal use. The sections below cover building
+it yourself from source and the manual command-line route.
+
+> Apple **requires** two things that no app can remove: the tunnel runs as root
+> (so it asks for your password once per session), and Developer Mode has to be
+> on for the iPhone. That's why a tool like this can't live on the App Store.
+
 ## Features
 
 - **Teleport mode** — click anywhere (or search an address) to jump the device
@@ -183,6 +208,26 @@ ios-fake-gps/
 │   └── requirements.txt
 └── docs/                       screenshots
 ```
+
+## Building the release app yourself
+
+To produce the same bundled `FakeGPS.app` that's on the Releases page:
+
+```bash
+./scripts/build_runtime.sh   # freezes the Python engine into a standalone binary
+./scripts/build_app.sh       # builds the Swift app and assembles FakeGPS.app + a zip
+```
+
+Output lands in `dist/`:
+
+```
+dist/FakeGPS.app                  ← double-clickable app, runtime bundled inside
+dist/FakeGPS-macos-arm64.zip      ← what gets attached to a release
+```
+
+The build needs the dev sidecar set up first (see setup above) plus PyInstaller
+(`~/.ios-fake-gps/venv/bin/python -m pip install pyinstaller`). Builds are
+per-architecture; run it on an Apple-silicon Mac for an `arm64` build.
 
 ## Troubleshooting
 

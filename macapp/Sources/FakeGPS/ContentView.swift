@@ -139,7 +139,7 @@ struct ContentView: View {
             }
 
             if !config.isValid {
-                Text("Sidecar not found at \(config.sidecarRoot.path)")
+                Text("Runtime not found at \(config.locationDescription)")
                     .font(.caption).foregroundStyle(.orange)
             }
         }

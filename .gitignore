@@ -1,5 +1,10 @@
 sidecar/venv/
 macapp/.build/
 macapp/.swiftpm/
+dist/
+dist_pyi/
+build_pyi/
+__pycache__/
+*.spec
 .DS_Store
 *.log

@@ -9,10 +9,11 @@ struct FakeGPSApp: App {
 
     init() {
         let config = AppConfig()
-        let sidecar = Sidecar(pythonURL: config.pythonURL, scriptURL: config.scriptURL)
+        let launch = config.sidecarLaunch
+        let sidecar = Sidecar(executableURL: launch.executable, argsPrefix: launch.args)
         let engine = SimulationEngine(sidecar: sidecar)
-        let binDir = config.pythonURL.deletingLastPathComponent()
-        let tunnel = TunnelManager(pythonBinDir: { binDir })
+        let tunneldCmd = config.tunneldLaunch
+        let tunnel = TunnelManager(tunneldCommand: { tunneldCmd })
 
         _config = StateObject(wrappedValue: config)
         _sidecar = StateObject(wrappedValue: sidecar)
