@@ -89,33 +89,66 @@ cp sidecar/gpsd_helper.py ~/.ios-fake-gps/gpsd_helper.py
 1. Connect it to the Mac by USB and tap **Trust**.
 2. Enable **Settings → Privacy & Security → Developer Mode**, then reboot.
 
-## Running
+## Running it — step by step
 
-Two things need to be running: the **tunnel daemon** (root) and the **macOS
-app**. The app can launch the tunnel for you (it shows the macOS password
-dialog), or you can start it manually:
+Everything runs on the **Mac**; nothing is installed on the iPhone. Two
+processes need to be alive at the same time: the **tunnel daemon** (runs as root)
+and the **macOS app**. Use two Terminal windows.
+
+### Step 1 — Plug the iPhone into the Mac with a USB cable
+
+The connection is over **USB**. Plug the phone in and tap **Trust** on it if
+prompted. (Wi-Fi works too, but only after this first USB pairing.) Make sure
+**Developer Mode** is on — see the setup section above.
+
+Check the Mac sees it:
 
 ```bash
-# Terminal 1 — keep this running. Needs sudo because it opens a network tunnel.
+~/.ios-fake-gps/venv/bin/pymobiledevice3 usbmux list
+```
+
+You should see your device in the output (not an empty `[]`).
+
+### Step 2 — Terminal window 1: start the tunnel daemon (leave it running)
+
+This needs `sudo` because it opens a network tunnel to the device. Keep this
+window open the whole time:
+
+```bash
 sudo ~/.ios-fake-gps/venv/bin/python -m pymobiledevice3 remote tunneld
 ```
 
+It will print log lines and keep running. The first time it also mounts the
+Developer Disk Image automatically (give it a few seconds).
+
+> Prefer not to use the Terminal? You can skip this step and click
+> **Start tunnel (admin)…** inside the app instead — it shows the macOS password
+> dialog and starts the same daemon for you.
+
+### Step 3 — Terminal window 2: build and run the app
+
 ```bash
-# Terminal 2 — the GUI
 cd macapp
-swift run            # or: open Package.swift in Xcode and press Run
+swift run            # builds the app and launches it
 ```
 
-In the app:
+`swift run` compiles the Swift package and opens the window. (You can also run
+`swift build` first if you just want to compile, or open `macapp/Package.swift`
+in **Xcode** and press the Run button.)
 
-1. Wait for **Tunnel daemon running** ✓ (or click **Start tunnel (admin)…**).
-2. Click **Connect** — it shows the device name and iOS version.
+### Step 4 — Connect and spoof, in the app window
+
+1. Wait for **Tunnel daemon running** ✓ in the sidebar.
+2. Click **Connect** — it shows the connected device's name and iOS version.
 3. **Teleport** mode: click the map (or pick a search result) to jump the device
    there instantly.
 4. **Route** mode: click to drop waypoints, set the **Speed**, optionally enable
    **Loop** and **Jitter**, then press **Play**. The green marker is the live
    simulated position; the device follows it in real time.
 5. **Reset device location** clears the spoof and returns the device to real GPS.
+
+To confirm it works, open **Apple Maps** on the iPhone and tap the location
+arrow — it should show wherever you set it on the Mac.
 
 ## Quick CLI sanity check (no GUI)
 
