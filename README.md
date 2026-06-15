@@ -4,17 +4,17 @@
 
 <h1 align="center">iOS Fake GPS</h1>
 
-<p align="center">A Lockito-style location simulator for iPhone</p>
+<p align="center">A Lockito-style location simulator for iPhone — a clean macOS app.</p>
 
-Simulate a static location **or** a moving route (with adjustable speed, looping
-and GPS jitter) on a **non-jailbroken** iPhone, driven from a native macOS app.
+Set a fixed location **or** play a moving route (with adjustable speed, looping
+and GPS jitter) on a **non-jailbroken** iPhone. Everything is driven from a
+native macOS app — the iPhone just needs to be plugged in.
 
 This is the iOS counterpart to Android's **Lockito**. Unlike Android, iOS has no
 public "mock location" API, so an app installed *on the phone* can't fake GPS for
-other apps. Instead the spoof is driven from a tethered Mac over Apple's
+other apps. Instead the location is driven from a tethered Mac over Apple's
 **developer tunnel** — the same mechanism Xcode uses to simulate location while
-debugging. The coordinate you set is seen **system-wide** by every app on the
-device.
+debugging. Whatever you set is seen **system-wide** by every app on the device.
 
 ![The macOS app: route mode over the Bay Area, tunnel connected](docs/app.png)
 
@@ -23,243 +23,142 @@ device.
 > location-based access controls breaks those services' terms — and possibly the
 > law.
 
-## Download
+## Get started
 
-Grab the latest prebuilt app from the
-[**Releases**](https://github.com/orestislef/ios-fake-gps/releases) page. The
-`.app` already has the Python engine bundled inside it, so you don't need to
-install Python or anything else.
-
-1. Download `FakeGPS-macos-arm64.zip` and unzip it.
+1. Download the latest **FakeGPS-macos-arm64.zip** from the
+   [**Releases**](https://github.com/orestislef/ios-fake-gps/releases) page and
+   unzip it.
 2. Drag **FakeGPS.app** into your **Applications** folder.
-3. The first time you open it, macOS will warn that it's from an unidentified
-   developer (the app isn't notarized). **Right-click the app → Open**, then
-   confirm. You only have to do this once. If it still refuses, run:
+3. First launch only: macOS warns it's from an unidentified developer (the app
+   isn't notarized). **Right-click the app → Open** and confirm. If it still
+   refuses, run once:
    ```bash
    xattr -dr com.apple.quarantine /Applications/FakeGPS.app
    ```
-4. Open the app, click **Start tunnel (admin)…** (it asks for your password
-   once), plug in your iPhone, and hit **Connect**.
+4. Open the app. A short **setup checklist** walks you through the rest — plug in
+   your iPhone, start the tunnel, and connect.
 
-That's it — no Terminal needed for normal use. The sections below cover building
-it yourself from source and the manual command-line route.
+That's it. The app has the engine bundled inside it, so **you don't need to
+install Python or anything else**, and you never need the Terminal.
 
-> Apple **requires** two things that no app can remove: the tunnel runs as root
-> (so it asks for your password once per session), and Developer Mode has to be
-> on for the iPhone. That's why a tool like this can't live on the App Store.
+### What the checklist asks for
+
+These are the only steps Apple requires a human to do — nothing to download:
+
+- **Connect your iPhone** — plug it in with a USB cable, tap **Trust**, and turn
+  on **Developer Mode** (Settings ▸ Privacy & Security ▸ Developer Mode). The app
+  shows ✓ the moment it sees the device.
+- **Start the secure tunnel** — one button; it asks for your Mac password once
+  per session (the tunnel runs as root, which Apple requires).
+- **Connect** — links the app to the device. Done.
 
 ## Features
 
-- **Teleport mode** — click anywhere (or search an address) to jump the device
-  there instantly.
-- **Route mode** — drop a series of waypoints and play them back as continuous
-  movement.
-- **Speed control** — 1–300 km/h; the app interpolates position every second so
-  motion is smooth and realistic.
+- **Teleport** — click the map or search an address to jump the device there.
+- **Route playback** — drop waypoints and move along them continuously.
+- **Speed control** — 1–300 km/h, with smooth per-second interpolation.
 - **Loop** a route indefinitely.
-- **GPS jitter** — add a few metres of random noise so the track doesn't look
-  unnaturally perfect.
+- **GPS jitter** — add a few metres of noise so the track looks natural.
 - **Address / place search** powered by MapKit.
-- **Live position marker** showing exactly where the device currently reports it
-  is, plus distance and ETA readouts.
-- **One-click reset** back to the device's real GPS.
-- **Auto-reset on exit** — disconnecting or quitting the app restores the phone's
-  real location automatically, so you never get left on a fake position.
+- **Live position marker**, plus distance and ETA readouts.
+- **Auto-reset on exit** — disconnecting or quitting restores the phone's real
+  location automatically, so you're never left on a fake position.
 
 ## How it works
 
 ```
-macOS app (SwiftUI + MapKit)            Python sidecar              iPhone
-  drop pins / search / route ─stdin──▶  pymobiledevice3  ──tunnel──▶  every app
-  speed · loop · jitter      ◀stdout──  LocationSimulation   (DDI)     sees fake GPS
-  interpolates the movement             holds 1 connection
+macOS app (SwiftUI + MapKit)            bundled engine              iPhone
+  search / drop pins / route ─────────▶  pymobiledevice3  ──tunnel──▶  every app
+  speed · loop · jitter      ◀─────────  LocationSimulation   (DDI)     sees fake GPS
+  interpolates the movement              (frozen, inside .app)
 ```
 
-- **`macapp/`** — the GUI (SwiftUI + MapKit). It owns the map, route editing and
-  movement interpolation, so speed / pause / loop / jitter are all controlled on
-  the Mac side rather than relying on the device's own GPX timing. It talks to
-  the sidecar with newline-delimited JSON over stdin/stdout.
-- **`sidecar/gpsd_helper.py`** — a small Python process that holds **one**
-  developer connection open and applies each coordinate through
-  `pymobiledevice3`'s `LocationSimulation` DVT channel. Keeping a single
-  persistent connection avoids re-doing the slow tunnel handshake on every point
-  (important when pushing a new coordinate roughly once a second).
-- **`tunneld`** — `pymobiledevice3 remote tunneld`, a root daemon that creates
-  the per-device RemoteXPC tunnel and auto-mounts the Developer Disk Image.
-  Required on iOS 17+.
-
-The tunnel daemon running and serving the app's requests:
-
-![tunneld serving developer-tunnel requests](docs/tunnel.png)
+- The **app** owns the map, route editing and movement interpolation, so speed /
+  pause / loop / jitter are all controlled on the Mac side.
+- The **engine** is a small Python program (built on
+  [pymobiledevice3](https://github.com/doronz88/pymobiledevice3)) frozen into a
+  standalone binary inside `FakeGPS.app` — no Python needed on your Mac. It holds
+  one developer connection open and applies each coordinate.
+- A small **tunnel daemon** (started by the app, as root) opens the developer
+  tunnel and mounts the Developer Disk Image. Required on iOS 17+.
 
 ## Requirements
 
-- macOS with **Xcode** / the Swift toolchain (`swift` + `xcodebuild`).
-- **Python 3.10+**.
-- An iPhone on **iOS 17 or newer** with a USB cable.
+- A Mac on **Apple silicon** (the prebuilt app is `arm64`).
+- An iPhone on **iOS 17 or newer** with a USB cable and **Developer Mode** on.
 
-## One-time setup
+## For developers — build from source
 
-### 1. Python sidecar — install OUTSIDE `~/Documents`
+The app is a Swift Package (`macapp/`) plus a Python engine (`sidecar/`).
 
-The privileged `tunneld` daemon runs as **root**, and macOS **TCC** blocks root
-from reading `~/Documents`, `~/Desktop` and `~/Downloads`. So the Python runtime
-has to live somewhere root can read. Use a dot-folder in your home directory:
+Set up the Python side once (kept in `~/.ios-fake-gps`, **not** `~/Documents`,
+because the root tunnel daemon can't read TCC-protected folders):
 
 ```bash
-mkdir -p ~/.ios-fake-gps
-python3 -m venv ~/.ios-fake-gps/venv
-~/.ios-fake-gps/venv/bin/pip install -r sidecar/requirements.txt
-cp sidecar/gpsd_helper.py ~/.ios-fake-gps/gpsd_helper.py
+./setup.sh
 ```
 
-> Putting the venv under `~/Documents` makes `tunneld` die instantly with
-> `PermissionError: ... pyvenv.cfg`. That's the TCC restriction at work, not a
-> bug — keep the runtime in `~/.ios-fake-gps`.
-
-### 2. iPhone
-
-1. Connect it to the Mac by USB and tap **Trust**.
-2. Enable **Settings → Privacy & Security → Developer Mode**, then reboot.
-
-## Running it — step by step
-
-Everything runs on the **Mac**; nothing is installed on the iPhone. Two
-processes need to be alive at the same time: the **tunnel daemon** (runs as root)
-and the **macOS app**. Use two Terminal windows.
-
-### Step 1 — Plug the iPhone into the Mac with a USB cable
-
-The connection is over **USB**. Plug the phone in and tap **Trust** on it if
-prompted. (Wi-Fi works too, but only after this first USB pairing.) Make sure
-**Developer Mode** is on — see the setup section above.
-
-Check the Mac sees it:
+Run the app from source:
 
 ```bash
-~/.ios-fake-gps/venv/bin/pymobiledevice3 usbmux list
+cd macapp && swift run        # or open macapp/Package.swift in Xcode and Run
 ```
 
-You should see your device in the output (not an empty `[]`).
-
-### Step 2 — Terminal window 1: start the tunnel daemon (leave it running)
-
-This needs `sudo` because it opens a network tunnel to the device. Keep this
-window open the whole time:
+Produce the bundled, double-clickable app and a release zip:
 
 ```bash
-sudo ~/.ios-fake-gps/venv/bin/python -m pymobiledevice3 remote tunneld
+./scripts/build_app.sh        # builds the engine + app -> dist/FakeGPS.app + zip
 ```
 
-It will print log lines and keep running. The first time it also mounts the
-Developer Disk Image automatically (give it a few seconds).
-
-> Prefer not to use the Terminal? You can skip this step and click
-> **Start tunnel (admin)…** inside the app instead — it shows the macOS password
-> dialog and starts the same daemon for you.
-
-### Step 3 — Terminal window 2: build and run the app
+Regenerate the icon:
 
 ```bash
-cd macapp
-swift run            # builds the app and launches it
+~/.ios-fake-gps/venv/bin/python scripts/make_icon.py
+iconutil -c icns assets/AppIcon.iconset -o assets/AppIcon.icns
 ```
 
-`swift run` compiles the Swift package and opens the window. (You can also run
-`swift build` first if you just want to compile, or open `macapp/Package.swift`
-in **Xcode** and press the Run button.)
-
-### Step 4 — Connect and spoof, in the app window
-
-1. Wait for **Tunnel daemon running** ✓ in the sidebar.
-2. Click **Connect** — it shows the connected device's name and iOS version.
-3. **Teleport** mode: click the map (or pick a search result) to jump the device
-   there instantly.
-4. **Route** mode: click to drop waypoints, set the **Speed**, optionally enable
-   **Loop** and **Jitter**, then press **Play**. The green marker is the live
-   simulated position; the device follows it in real time.
-5. **Reset device location** clears the spoof and returns the device to real GPS.
-
-To confirm it works, open **Apple Maps** on the iPhone and tap the location
-arrow — it should show wherever you set it on the Mac.
-
-## Quick CLI sanity check (no GUI)
-
-With the tunnel running, this teleports the device to Liberty Island:
-
-```bash
-~/.ios-fake-gps/venv/bin/pymobiledevice3 developer dvt simulate-location set -- 40.690008 -74.045843
-~/.ios-fake-gps/venv/bin/pymobiledevice3 developer dvt simulate-location clear
-```
-
-If that works, the GUI will too. Open Apple Maps on the phone and tap the
-location arrow to confirm.
-
-## Project layout
+### Project layout
 
 ```
 ios-fake-gps/
-├── macapp/                     native macOS app (Swift Package, SwiftUI + MapKit)
-│   ├── Package.swift
-│   └── Sources/FakeGPS/
-│       ├── App.swift            app entry point + dependency wiring
-│       ├── ContentView.swift    sidebar controls, search, transport
-│       ├── MapView.swift        MKMapView wrapper (waypoints, route, marker)
-│       ├── MapController.swift   map commands + MapKit place search
-│       ├── SimulationEngine.swift  route interpolation, play/pause/loop/jitter
-│       ├── Sidecar.swift        launches & speaks JSON to the Python helper
-│       ├── TunnelManager.swift  tracks / starts the root tunnel daemon
-│       ├── Geo.swift            haversine + along-path interpolation maths
-│       └── AppConfig.swift      resolves the runtime location
-├── sidecar/
-│   ├── gpsd_helper.py          persistent location-simulation helper
-│   └── requirements.txt
-└── docs/                       screenshots
+├── macapp/Sources/FakeGPS/   the macOS app (SwiftUI + MapKit)
+├── sidecar/                  the Python engine + runtime entry point
+├── scripts/                  build_runtime.sh, build_app.sh, make_icon.py
+├── assets/                   app icon
+└── docs/                     screenshots
 ```
 
-## Building the release app yourself
+## Command-line use (optional)
 
-To produce the same bundled `FakeGPS.app` that's on the Releases page:
+The engine inside the app also works from the Terminal. Start the tunnel:
 
 ```bash
-./scripts/build_runtime.sh   # freezes the Python engine into a standalone binary
-./scripts/build_app.sh       # builds the Swift app and assembles FakeGPS.app + a zip
+sudo "/Applications/FakeGPS.app/Contents/Resources/runtime/fakegps-runtime" tunneld
 ```
 
-Output lands in `dist/`:
+Then set a location directly with `pymobiledevice3` (bundled in the app), e.g.
+Liberty Island:
 
+```bash
+"/Applications/FakeGPS.app/Contents/Resources/runtime/fakegps-runtime" sidecar --list
 ```
-dist/FakeGPS.app                  ← double-clickable app, runtime bundled inside
-dist/FakeGPS-macos-arm64.zip      ← what gets attached to a release
-```
-
-The build needs the dev sidecar set up first (see setup above) plus PyInstaller
-(`~/.ios-fake-gps/venv/bin/python -m pip install pyinstaller`). Builds are
-per-architecture; run it on an Apple-silicon Mac for an `arm64` build.
 
 ## Troubleshooting
 
-- **"Tunnel daemon not running"** — start `tunneld` (needs `sudo`); confirm with
-  `curl http://127.0.0.1:49151`.
-- **`PermissionError: ... pyvenv.cfg`** — the venv is under a TCC-protected
-  folder. Recreate it in `~/.ios-fake-gps` as shown above.
-- **"Could not open LocationSimulation … DDI"** — Developer Mode is off, the
-  device isn't trusted, or the Developer Disk Image hasn't mounted yet. Re-plug,
-  trust, and give `tunneld` a few seconds to auto-mount it.
-- **No device listed** — check with
-  `~/.ios-fake-gps/venv/bin/pymobiledevice3 usbmux list`.
-- **App can't find the sidecar** — it looks in `~/.ios-fake-gps`; the connection
-  panel warns if it can't find `venv/bin/python` + `gpsd_helper.py`.
+- **App won't open ("unidentified developer")** — right-click → Open, or run
+  `xattr -dr com.apple.quarantine /Applications/FakeGPS.app`.
+- **Tunnel won't start** — make sure you entered the admin password; the daemon
+  needs root. Logs are at `/tmp/ios-fake-gps-tunneld.log`.
+- **iPhone never detected** — check the cable, tap **Trust** on the phone, and
+  confirm **Developer Mode** is enabled (then reboot the phone).
+- **"Could not open LocationSimulation"** — Developer Mode is off or the Developer
+  Disk Image hasn't mounted yet; give the tunnel a few seconds after starting.
 
 ## Limitations
 
 - The Mac must stay tethered (USB; Wi-Fi works after an initial USB pairing).
-- iOS 17+ requires Developer Mode and the root `tunneld` daemon.
-- This sets the reported location; it does not fake Wi-Fi or cell-tower signals,
-  so a small number of apps that cross-check those may notice the mismatch.
-
-## Built with
-
-- [pymobiledevice3](https://github.com/doronz88/pymobiledevice3) — the developer
-  tunnel and `LocationSimulation` service.
-- SwiftUI + MapKit for the macOS app.
+- The tunnel runs as root, so it asks for your password once per session — an
+  Apple requirement that can't be removed (it's why this can't be an App Store
+  app, and why no on-device-only app can do this).
+- It sets the reported location only; it doesn't fake Wi-Fi or cell-tower
+  signals, so a few apps that cross-check those may notice the mismatch.

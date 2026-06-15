@@ -26,6 +26,16 @@ struct ContentView: View {
                 .frame(minWidth: 480, minHeight: 480)
         }
         .frame(minWidth: 880, minHeight: 560)
+        .overlay {
+            if !sidecar.state.isReady {
+                ZStack {
+                    Rectangle().fill(.black.opacity(0.25)).ignoresSafeArea()
+                    OnboardingView()
+                }
+                .transition(.opacity)
+            }
+        }
+        .animation(.easeInOut(duration: 0.2), value: sidecar.state.isReady)
     }
 
     private var mapArea: some View {

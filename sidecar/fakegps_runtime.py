@@ -26,7 +26,30 @@ def main() -> int:
         sys.argv = ["gpsd_helper"] + rest
         return asyncio.run(gpsd_helper.amain())
 
-    sys.stderr.write("usage: fakegps-runtime {tunneld|sidecar} [args...]\n")
+    if mode == "usbmux":
+        # List USB/network-attached devices WITHOUT needing the tunnel — used by
+        # the app's onboarding to detect a plugged-in iPhone. Prints one JSON line.
+        import asyncio
+        import json
+
+        async def _list():
+            from pymobiledevice3.usbmux import list_devices
+            out = []
+            for d in await list_devices():
+                out.append({
+                    "serial": getattr(d, "serial", None),
+                    "connection": getattr(d, "connection_type", None),
+                })
+            return out
+
+        try:
+            devices = asyncio.run(_list())
+            print(json.dumps({"devices": devices}))
+        except Exception as e:  # noqa: BLE001
+            print(json.dumps({"devices": [], "error": str(e)}))
+        return 0
+
+    sys.stderr.write("usage: fakegps-runtime {tunneld|sidecar|usbmux} [args...]\n")
     return 2
 
 

@@ -1,19 +1,17 @@
 import Foundation
 
-/// How the Python side (sidecar + tunnel daemon) is provided.
+/// How the Python side (sidecar / tunnel / usbmux) is provided.
 enum RuntimeKind {
     /// A standalone PyInstaller binary shipped inside FakeGPS.app. No Python
     /// install needed on the machine.
     case bundled(URL)
-    /// A development setup: the venv's python running the source scripts.
+    /// A development setup: the venv's python running `fakegps_runtime.py`.
     case dev(python: URL, script: URL)
 }
 
-/// Resolves how to launch the sidecar and the tunnel daemon.
-///
-/// When running as a packaged app (FakeGPS.app), it uses the frozen
-/// `fakegps-runtime` binary in `Contents/Resources/runtime`. When running via
-/// `swift run` during development, it falls back to the venv in `~/.ios-fake-gps`.
+/// Resolves how to launch the runtime in its three modes: `sidecar`, `tunneld`
+/// and `usbmux`. Both bundled and dev paths funnel through the same
+/// `fakegps_runtime` entry point, so behaviour is identical.
 @MainActor
 final class AppConfig: ObservableObject {
     let runtime: RuntimeKind
@@ -30,36 +28,29 @@ final class AppConfig: ObservableObject {
             }
         }
         let home = FileManager.default.homeDirectoryForCurrentUser
-        let venvPython = home.appendingPathComponent(".ios-fake-gps/venv/bin/python")
-        let script = home.appendingPathComponent(".ios-fake-gps/gpsd_helper.py")
-        return .dev(python: venvPython, script: script)
+        let python = home.appendingPathComponent(".ios-fake-gps/venv/bin/python")
+        let script = home.appendingPathComponent(".ios-fake-gps/fakegps_runtime.py")
+        return .dev(python: python, script: script)
     }
 
-    // MARK: - Sidecar launch
-
-    /// (executable, leading args) for running the sidecar. Append e.g. `--udid X`.
-    var sidecarLaunch: (executable: URL, args: [String]) {
+    /// (executable, leading args) for a runtime mode. Append extra args as needed.
+    func launch(_ mode: String) -> (executable: URL, args: [String]) {
         switch runtime {
         case let .bundled(bin):
-            return (bin, ["sidecar"])
+            return (bin, [mode])
         case let .dev(python, script):
-            return (python, [script.path])
+            return (python, [script.path, mode])
         }
     }
 
-    // MARK: - Tunnel daemon launch (used by an admin osascript shell)
+    var sidecarLaunch: (executable: URL, args: [String]) { launch("sidecar") }
+    var usbmuxLaunch: (executable: URL, args: [String]) { launch("usbmux") }
 
-    /// (executablePath, args) for `… remote tunneld`.
+    /// Tunnel daemon as (path, args) for the privileged osascript shell.
     var tunneldLaunch: (path: String, args: [String]) {
-        switch runtime {
-        case let .bundled(bin):
-            return (bin.path, ["tunneld"])
-        case let .dev(python, _):
-            return (python.path, ["-m", "pymobiledevice3", "remote", "tunneld"])
-        }
+        let l = launch("tunneld")
+        return (l.executable.path, l.args)
     }
-
-    // MARK: - Validity
 
     var isValid: Bool {
         switch runtime {

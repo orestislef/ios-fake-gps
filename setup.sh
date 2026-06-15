@@ -20,6 +20,7 @@ fi
 "$RUNTIME/venv/bin/pip" install --upgrade pip
 "$RUNTIME/venv/bin/pip" install -r "$REPO/sidecar/requirements.txt"
 cp "$REPO/sidecar/gpsd_helper.py" "$RUNTIME/gpsd_helper.py"
+cp "$REPO/sidecar/fakegps_runtime.py" "$RUNTIME/fakegps_runtime.py"
 
 echo
 echo "Done."
