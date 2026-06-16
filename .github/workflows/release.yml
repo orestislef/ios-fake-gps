@@ -38,6 +38,6 @@ jobs:
           gh release create "$GITHUB_REF_NAME" \
             "dist/FakeGPS-macos-arm64.zip#FakeGPS-macos-arm64.zip" \
             --title "FakeGPS $GITHUB_REF_NAME" \
-            --generate-notes \
+            --notes-file .github/release-notes.md \
           || gh release upload "$GITHUB_REF_NAME" \
             "dist/FakeGPS-macos-arm64.zip#FakeGPS-macos-arm64.zip" --clobber
