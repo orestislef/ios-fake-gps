@@ -7,10 +7,10 @@
 <p align="center">A Lockito-style location simulator for iPhone — a clean macOS app.</p>
 
 <p align="center">
-  <a href="https://github.com/orestislef/ios-fake-gps/releases"><img src="https://img.shields.io/github/v/release/orestislef/ios-fake-gps?display_name=tag" alt="Latest release"></a>
+  <a href="https://github.com/orestislef/ios-fake-gps/releases/latest"><img src="https://img.shields.io/badge/download-macOS%20app-blue" alt="Download"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License: MIT"></a>
   <img src="https://img.shields.io/badge/platform-macOS%20·%20Apple%20silicon-lightgrey" alt="Platform">
-  <a href="https://github.com/orestislef/ios-fake-gps/releases"><img src="https://img.shields.io/github/downloads/orestislef/ios-fake-gps/total" alt="Downloads"></a>
+  <img src="https://img.shields.io/badge/iOS-17%2B-black" alt="iOS 17+">
 </p>
 
 <p align="center">
