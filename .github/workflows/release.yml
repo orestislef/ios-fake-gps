@@ -1,0 +1,43 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    name: Build and attach app
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set up Python engine
+        run: |
+          python -m venv .venv
+          ./.venv/bin/pip install --upgrade pip
+          ./.venv/bin/pip install -r sidecar/requirements.txt pyinstaller
+
+      - name: Build FakeGPS.app
+        env:
+          PYTHON: ${{ github.workspace }}/.venv/bin/python
+        run: |
+          export VERSION="${GITHUB_REF_NAME#v}"
+          ./scripts/build_app.sh
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            "dist/FakeGPS-macos-arm64.zip#FakeGPS-macos-arm64.zip" \
+            --title "FakeGPS $GITHUB_REF_NAME" \
+            --generate-notes \
+          || gh release upload "$GITHUB_REF_NAME" \
+            "dist/FakeGPS-macos-arm64.zip#FakeGPS-macos-arm64.zip" --clobber

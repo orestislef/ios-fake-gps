@@ -1,0 +1,22 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    name: Build macOS app
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Swift package
+        working-directory: macapp
+        run: swift build
+
+      - name: Check Python syntax
+        run: |
+          python3 -m py_compile sidecar/gpsd_helper.py sidecar/fakegps_runtime.py

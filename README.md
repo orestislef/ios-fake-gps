@@ -8,6 +8,7 @@
 
 <p align="center">
   <a href="https://github.com/orestislef/ios-fake-gps/releases/latest"><img src="https://img.shields.io/badge/download-macOS%20app-blue" alt="Download"></a>
+  <a href="https://github.com/orestislef/ios-fake-gps/actions/workflows/ci.yml"><img src="https://github.com/orestislef/ios-fake-gps/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License: MIT"></a>
   <img src="https://img.shields.io/badge/platform-macOS%20·%20Apple%20silicon-lightgrey" alt="Platform">
   <img src="https://img.shields.io/badge/iOS-17%2B-black" alt="iOS 17+">
