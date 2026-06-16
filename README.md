@@ -14,6 +14,16 @@
   <a href="https://github.com/orestislef/ios-fake-gps/releases"><img src="https://img.shields.io/github/downloads/orestislef/ios-fake-gps/total" alt="Downloads"></a>
 </p>
 
+<p align="center">
+  <a href="https://github.com/orestislef/ios-fake-gps/releases/latest"><b>⬇️ Download for macOS</b></a>
+  &nbsp;·&nbsp;
+  <a href="#get-started">Get started</a>
+  &nbsp;·&nbsp;
+  <a href="https://github.com/orestislef/ios-fake-gps/discussions">Discussions</a>
+  &nbsp;·&nbsp;
+  ⭐ Star the repo if it helps you!
+</p>
+
 Set a fixed location **or** play a moving route (with adjustable speed, looping
 and GPS jitter) on a **non-jailbroken** iPhone. Everything is driven from a
 native macOS app — the iPhone just needs to be plugged in.
