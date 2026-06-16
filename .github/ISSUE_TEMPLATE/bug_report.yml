@@ -1,0 +1,51 @@
+name: Bug report
+description: Report a problem with iOS Fake GPS
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for taking the time to file a bug! Please fill in the details below.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: A clear description of the bug and what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open the app
+        2. Click ...
+        3. See ...
+    validations:
+      required: true
+  - type: input
+    id: macos
+    attributes:
+      label: macOS version
+      placeholder: "e.g. 15.0"
+    validations:
+      required: true
+  - type: input
+    id: mac-model
+    attributes:
+      label: Mac model
+      placeholder: "e.g. MacBook Air M1 / Mac mini M4"
+    validations:
+      required: true
+  - type: input
+    id: iphone
+    attributes:
+      label: iPhone model and iOS version
+      placeholder: "e.g. iPhone 15 Pro, iOS 18.1"
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Tunnel log (optional)
+      description: Output from /tmp/ios-fake-gps-tunneld.log, if relevant.
+      render: shell

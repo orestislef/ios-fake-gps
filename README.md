@@ -6,6 +6,14 @@
 
 <p align="center">A Lockito-style location simulator for iPhone — a clean macOS app.</p>
 
+<p align="center">
+  <a href="https://github.com/orestislef/ios-fake-gps/releases"><img src="https://img.shields.io/github/v/release/orestislef/ios-fake-gps?display_name=tag" alt="Latest release"></a>
+  <a href="https://github.com/orestislef/ios-fake-gps/actions/workflows/ci.yml"><img src="https://github.com/orestislef/ios-fake-gps/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License: MIT"></a>
+  <img src="https://img.shields.io/badge/platform-macOS%20·%20Apple%20silicon-lightgrey" alt="Platform">
+  <a href="https://github.com/orestislef/ios-fake-gps/releases"><img src="https://img.shields.io/github/downloads/orestislef/ios-fake-gps/total" alt="Downloads"></a>
+</p>
+
 Set a fixed location **or** play a moving route (with adjustable speed, looping
 and GPS jitter) on a **non-jailbroken** iPhone. Everything is driven from a
 native macOS app — the iPhone just needs to be plugged in.
@@ -84,7 +92,7 @@ macOS app (SwiftUI + MapKit)            bundled engine              iPhone
 
 ## Requirements
 
-- A Mac on **Apple silicon** (the prebuilt app is `arm64`).
+- A Mac on **Apple silicon** (the prebuilt app is `arm64`; tested on M1 and M4).
 - An iPhone on **iOS 17 or newer** with a USB cable and **Developer Mode** on.
 
 ## For developers — build from source
@@ -162,3 +170,16 @@ Liberty Island:
   app, and why no on-device-only app can do this).
 - It sets the reported location only; it doesn't fake Wi-Fi or cell-tower
   signals, so a few apps that cross-check those may notice the mismatch.
+
+## Contributing
+
+Contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) and the
+[Code of Conduct](CODE_OF_CONDUCT.md). For security reports, see
+[SECURITY.md](SECURITY.md).
+
+## License & use
+
+Released under the [MIT License](LICENSE). Please read the
+[Disclaimer](DISCLAIMER.md): this tool is for lawful testing and personal use
+only — not for fraud, evading anti-cheat/anti-fraud systems, or deceiving third
+parties.
