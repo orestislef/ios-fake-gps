@@ -3,8 +3,9 @@ import Foundation
 import MapKit
 
 /// Bridge that lets SwiftUI views drive the underlying `MKMapView`
-/// (recenter, zoom). The `MapView` coordinator wires these closures up.
-@MainActor
+/// (recenter, zoom). The `MapView` coordinator wires these closures up. Not
+/// actor-isolated: the closures are assigned by the (non-isolated) map
+/// coordinator and only ever invoked on the main thread.
 final class MapController: ObservableObject {
     var recenter: ((CLLocationCoordinate2D, CLLocationDistance) -> Void)?
     var zoomBy: ((Double) -> Void)?

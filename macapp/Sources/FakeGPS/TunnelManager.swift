@@ -21,7 +21,8 @@ final class TunnelManager: ObservableObject {
 
     private func startPolling() {
         let t = Timer(timeInterval: 2.0, repeats: true) { [weak self] _ in
-            Task { @MainActor in await self?.poll() }
+            guard let self else { return }
+            Task { @MainActor in await self.poll() }
         }
         RunLoop.main.add(t, forMode: .common)
         pollTimer = t

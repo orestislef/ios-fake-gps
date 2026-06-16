@@ -101,7 +101,8 @@ final class SimulationEngine: ObservableObject {
     private func scheduleTimer() {
         timer?.invalidate()
         let t = Timer(timeInterval: tick, repeats: true) { [weak self] _ in
-            Task { @MainActor in self?.step() }
+            guard let self else { return }
+            Task { @MainActor in self.step() }
         }
         RunLoop.main.add(t, forMode: .common)
         timer = t

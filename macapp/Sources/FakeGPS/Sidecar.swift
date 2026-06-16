@@ -81,7 +81,8 @@ final class Sidecar: ObservableObject {
         outPipe.fileHandleForReading.readabilityHandler = { [weak self] handle in
             let data = handle.availableData
             guard !data.isEmpty else { return }
-            Task { @MainActor in self?.ingest(data) }
+            guard let self else { return }
+            Task { @MainActor in self.ingest(data) }
         }
         errPipe.fileHandleForReading.readabilityHandler = { handle in
             let data = handle.availableData
@@ -90,7 +91,8 @@ final class Sidecar: ObservableObject {
             }
         }
         proc.terminationHandler = { [weak self] _ in
-            Task { @MainActor in self?.handleTermination() }
+            guard let self else { return }
+            Task { @MainActor in self.handleTermination() }
         }
 
         do {
