@@ -302,6 +302,25 @@ struct ContentView: View {
                 Text(String(format: "Now: %.6f, %.6f", c.latitude, c.longitude))
                     .font(.caption.monospaced())
             }
+
+            HStack(spacing: 10) {
+                Button {
+                    engine.undo()
+                } label: {
+                    Label("Undo", systemImage: "arrow.uturn.backward")
+                }
+                .controlSize(.small)
+                .disabled(!engine.canUndo)
+
+                Button {
+                    engine.redo()
+                } label: {
+                    Label("Redo", systemImage: "arrow.uturn.forward")
+                }
+                .controlSize(.small)
+                .disabled(!engine.canRedo)
+            }
+
             if let err = sidecar.lastError, !sidecar.state.isFailed {
                 Text(err).font(.caption).foregroundStyle(.orange)
             }

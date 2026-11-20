@@ -57,5 +57,20 @@ struct FakeGPSApp: App {
                 }
         }
         .windowResizability(.contentSize)
+        .commands {
+            CommandGroup(replacing: .undoRedo) {
+                Button("Undo Route Edit") {
+                    engine.undo()
+                }
+                .keyboardShortcut("z", modifiers: [.command])
+                .disabled(!engine.canUndo)
+
+                Button("Redo Route Edit") {
+                    engine.redo()
+                }
+                .keyboardShortcut("z", modifiers: [.command, .shift])
+                .disabled(!engine.canRedo)
+            }
+        }
     }
 }
