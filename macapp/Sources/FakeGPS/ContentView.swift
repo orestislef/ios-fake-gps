@@ -292,6 +292,12 @@ struct ContentView: View {
 
     private var statusFooter: some View {
         VStack(alignment: .leading, spacing: 4) {
+            Toggle(
+                "China GPS correction (GCJ-02 → WGS-84)",
+                isOn: $engine.chinaCoordinateCorrection
+            )
+            .font(.caption)
+
             if let c = engine.currentCoordinate {
                 Text(String(format: "Now: %.6f, %.6f", c.latitude, c.longitude))
                     .font(.caption.monospaced())

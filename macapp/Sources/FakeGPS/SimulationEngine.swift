@@ -37,6 +37,7 @@ final class SimulationEngine: ObservableObject {
 
     @Published var loop: Bool = false
     @Published var jitterMetres: Double = 0   // 0 = perfectly smooth
+    @Published var chinaCoordinateCorrection = false
 
     @Published private(set) var playback: PlaybackState = .idle
     @Published private(set) var currentCoordinate: CLLocationCoordinate2D?
@@ -110,10 +111,23 @@ final class SimulationEngine: ObservableObject {
 
     // MARK: - Teleport (single static location)
 
+    private func sendLocation(_ coordinate: CLLocationCoordinate2D) {
+        let output =
+            chinaCoordinateCorrection
+            ? ChinaCoordinates.gcj02ToWgs84(coordinate)
+            : coordinate
+
+        sidecar.setLocation(
+            output.latitude,
+            output.longitude
+        )
+    }
+
     func teleport(to c: CLLocationCoordinate2D) {
         guard sidecar.state.isReady else { return }
+
         currentCoordinate = c
-        sidecar.setLocation(c.latitude, c.longitude)
+        sendLocation(c)
     }
 
     // MARK: - Route playback
@@ -201,7 +215,7 @@ final class SimulationEngine: ObservableObject {
         }
         currentCoordinate = c
         progress = total == 0 ? 0 : min(1, travelled / total)
-        sidecar.setLocation(c.latitude, c.longitude)
+        sendLocation(c)
     }
 
     // MARK: - Readouts
