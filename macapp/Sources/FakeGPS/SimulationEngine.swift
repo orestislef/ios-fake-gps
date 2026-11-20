@@ -26,6 +26,11 @@ enum PlaybackState: Equatable {
 @MainActor
 final class SimulationEngine: ObservableObject {
     @Published var waypoints: [Waypoint] = []
+    @Published private(set) var canUndo = false
+    @Published private(set) var canRedo = false
+
+    private var redoStack: [Waypoint] = []
+
     @Published var speedKmh: Double = 50      // target ground speed
 
     @Published var speedVariationEnabled = false
@@ -96,15 +101,42 @@ final class SimulationEngine: ObservableObject {
     var coordinates: [CLLocationCoordinate2D] { waypoints.map(\.coordinate) }
     var totalDistance: Double { Geo.pathLength(coordinates) }
 
+    func undo() {
+        guard let previous = waypoints.popLast() else {
+            return
+        }
+
+        redoStack.append(previous)
+
+        canUndo = !waypoints.isEmpty
+        canRedo = true
+    }
+
+    func redo() {
+        guard let next = redoStack.popLast() else {
+            return
+        }
+
+        waypoints.append(next)
+
+        canUndo = true
+        canRedo = !redoStack.isEmpty
+    }
+
     // MARK: - Editing
 
     func addWaypoint(_ c: CLLocationCoordinate2D) {
         waypoints.append(Waypoint(coordinate: c))
+        redoStack.removeAll()
+
+        canUndo = true
+        canRedo = false
     }
 
     func clearRoute() {
         stop()
         waypoints.removeAll()
+        redoStack.removeAll()
         currentCoordinate = nil
         progress = 0
     }
