@@ -171,10 +171,73 @@ struct ContentView: View {
 
     private var routeSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("Speed").frame(width: 54, alignment: .leading)
-                Slider(value: $engine.speedKmh, in: 1 ... 300)
-                Text("\(Int(engine.speedKmh)) km/h").monospacedDigit().frame(width: 70, alignment: .trailing)
+            VStack(alignment: .leading, spacing: 10) {
+                Toggle(
+                    "Speed variation",
+                    isOn: $engine.speedVariationEnabled
+                )
+
+                if engine.speedVariationEnabled {
+                    HStack {
+                        Text("Min").frame(width: 54, alignment: .leading)
+
+                        // I couldn't think of a good solution like ranged slider, so here are just 2 ones
+                        // Make Min slider slidable upto max value and not 300m is more handful
+                        // than stucking before Max slider value
+                        Slider(value: $engine.minSpeedKmh, in: 1...(engine.maxSpeedKmh - 1))
+
+                        Text("\(Int(engine.minSpeedKmh)) km/h")
+                            .monospacedDigit()
+                            .frame(width: 70, alignment: .trailing)
+                    }
+
+                    HStack {
+                        Text("Max").frame(width: 54, alignment: .leading)
+
+                        Slider(value: $engine.maxSpeedKmh, in: 1...300)
+
+                        Text("\(Int(engine.maxSpeedKmh)) km/h")
+                            .monospacedDigit()
+                            .frame(width: 70, alignment: .trailing)
+                    }
+
+                    HStack {
+                        Text("Accel").frame(width: 54, alignment: .leading)
+
+                        Slider(
+                            value: $engine.accelerationKmhPerSecond,
+                            in: 0.2...5
+                        )
+
+                        Text(
+                            String(
+                                format: "%.1f",
+                                engine.accelerationKmhPerSecond
+                            )
+                        )
+                        .monospacedDigit()
+                        .frame(width: 70, alignment: .trailing)
+                    }
+
+                    if engine.playback != .idle {
+                        Text(
+                            "Current speed: \(Int(engine.actualSpeedKmh)) km/h"
+                        )
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    }
+                } else {
+                    HStack {
+                        Text("Speed")
+                            .frame(width: 54, alignment: .leading)
+
+                        Slider(value: $engine.speedKmh, in: 1...300)
+
+                        Text("\(Int(engine.speedKmh)) km/h")
+                            .monospacedDigit()
+                            .frame(width: 70, alignment: .trailing)
+                    }
+                }
             }
 
             HStack {
@@ -217,7 +280,11 @@ struct ContentView: View {
         VStack(alignment: .leading, spacing: 3) {
             Text("\(engine.waypoints.count) points · \(formatDistance(engine.totalDistance))")
             if engine.totalDistance > 0 {
-                Text("ETA \(formatDuration(engine.estimatedDurationSeconds)) at \(Int(engine.speedKmh)) km/h")
+                if engine.speedVariationEnabled {
+                    Text("ETA \(formatDuration(engine.estimatedDurationSeconds)) at \(Int(engine.minSpeedKmh))–\(Int(engine.maxSpeedKmh)) km/h")
+                } else {
+                    Text("ETA \(formatDuration(engine.estimatedDurationSeconds)) at \(Int(engine.speedKmh)) km/h")
+                }
             }
         }
         .font(.caption).foregroundStyle(.secondary)

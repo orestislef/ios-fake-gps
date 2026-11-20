@@ -27,6 +27,14 @@ enum PlaybackState: Equatable {
 final class SimulationEngine: ObservableObject {
     @Published var waypoints: [Waypoint] = []
     @Published var speedKmh: Double = 50      // target ground speed
+
+    @Published var speedVariationEnabled = false
+    @Published var minSpeedKmh: Double = 35
+    @Published var maxSpeedKmh: Double = 55
+    @Published var accelerationKmhPerSecond: Double = 1.5
+
+    @Published private(set) var actualSpeedKmh: Double = 50
+
     @Published var loop: Bool = false
     @Published var jitterMetres: Double = 0   // 0 = perfectly smooth
 
@@ -39,9 +47,49 @@ final class SimulationEngine: ObservableObject {
     private var travelled: Double = 0          // metres along the route
     private let tick: TimeInterval = 1.0       // update cadence (s)
     private var jitterSeed: Double = 0
+    private var targetSpeedKmh: Double = 50
+    private var secondsUntilSpeedChange: Double = 0
+    private var lastStepDate: Date?
 
     init(sidecar: Sidecar) {
         self.sidecar = sidecar
+    }
+
+    private func resetSpeedVariation() {
+        let low = max(1, min(minSpeedKmh, maxSpeedKmh))
+        let high = max(low, max(minSpeedKmh, maxSpeedKmh))
+
+        actualSpeedKmh = speedVariationEnabled
+            ? Double.random(in: low...high)
+            : max(0, speedKmh)
+        
+        targetSpeedKmh = actualSpeedKmh
+        secondsUntilSpeedChange = 0
+    }
+
+    private func updateSpeed(deltaTime: Double) -> Double {
+        guard speedVariationEnabled else {
+            actualSpeedKmh = max(0, speedKmh)
+            return actualSpeedKmh
+        }
+
+        let low = max(1, min(minSpeedKmh, maxSpeedKmh))
+        let high = max(low, max(minSpeedKmh, maxSpeedKmh))
+
+        secondsUntilSpeedChange -= deltaTime
+
+        if secondsUntilSpeedChange <= 0 {
+            targetSpeedKmh = Double.random(in: low...high)
+            secondsUntilSpeedChange = Double.random(in: 5...15)
+        }
+
+        let difference = targetSpeedKmh - actualSpeedKmh
+        let maxChange = max(0, accelerationKmhPerSecond) * deltaTime
+
+        actualSpeedKmh += min(max(difference, -maxChange), maxChange)
+        actualSpeedKmh = min(high, max(low, actualSpeedKmh))
+
+        return actualSpeedKmh
     }
 
     var coordinates: [CLLocationCoordinate2D] { waypoints.map(\.coordinate) }
@@ -77,10 +125,16 @@ final class SimulationEngine: ObservableObject {
             if let only = coordinates.first { teleport(to: only) }
             return
         }
-        if playback == .idle { travelled = 0 }
+
+        if playback == .idle {
+            travelled = 0
+            resetSpeedVariation()
+        }
+
         playback = .playing
+        lastStepDate = Date()
+        emitCurrent(total: totalDistance)
         scheduleTimer()
-        step() // fire immediately so motion starts without a 1s delay
     }
 
     func pause() {
@@ -88,6 +142,7 @@ final class SimulationEngine: ObservableObject {
         playback = .paused
         timer?.invalidate()
         timer = nil
+        lastStepDate = nil
     }
 
     func stop() {
@@ -96,6 +151,7 @@ final class SimulationEngine: ObservableObject {
         progress = 0
         timer?.invalidate()
         timer = nil
+        lastStepDate = nil
     }
 
     private func scheduleTimer() {
@@ -109,11 +165,19 @@ final class SimulationEngine: ObservableObject {
     }
 
     private func step() {
+        guard playback == .playing else { return }
+
         let total = totalDistance
         guard total > 0 else { stop(); return }
 
-        let speedMps = speedKmh * 1000 / 3600
-        travelled += speedMps * tick
+        let now = Date()
+        let deltaTime = max(0, now.timeIntervalSince(lastStepDate ?? now))
+        lastStepDate = now
+        
+        let currentSpeed = updateSpeed(deltaTime: deltaTime)
+        let speedMps = currentSpeed / 3.6
+
+        travelled += speedMps * deltaTime
 
         if travelled >= total {
             if loop {
@@ -125,6 +189,7 @@ final class SimulationEngine: ObservableObject {
                 return
             }
         }
+
         emitCurrent(total: total)
     }
 
@@ -142,7 +207,11 @@ final class SimulationEngine: ObservableObject {
     // MARK: - Readouts
 
     var estimatedDurationSeconds: Double {
-        let speedMps = speedKmh * 1000 / 3600
+        let effectiveSpeed = speedVariationEnabled
+            ? (minSpeedKmh + maxSpeedKmh) / 2
+            : speedKmh
+
+        let speedMps = effectiveSpeed / 3.6
         return speedMps > 0 ? totalDistance / speedMps : 0
     }
 }
