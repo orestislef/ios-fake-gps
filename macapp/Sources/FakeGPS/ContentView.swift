@@ -1,6 +1,8 @@
 import CoreLocation
 import MapKit
 import SwiftUI
+import AppKit
+import UniformTypeIdentifiers
 
 enum EditMode: String, CaseIterable, Identifiable {
     case teleport = "Teleport"
@@ -15,6 +17,7 @@ struct ContentView: View {
     @EnvironmentObject var tunnel: TunnelManager
 
     @State private var mode: EditMode = .route
+    @State private var routeFileError: String?
     @StateObject private var mapController = MapController()
     @StateObject private var search = PlaceSearch()
 
@@ -36,6 +39,19 @@ struct ContentView: View {
             }
         }
         .animation(.easeInOut(duration: 0.2), value: sidecar.state.isReady)
+        .alert(
+            "Route File Error",
+            isPresented: Binding(
+                get: { routeFileError != nil },
+                set: { if !$0 { routeFileError = nil } }
+            )
+        ) {
+            Button("OK", role: .cancel) {
+                routeFileError = nil
+            }
+        } message: {
+            Text(routeFileError ?? "Unknown error")
+        }
     }
 
     private var mapArea: some View {
@@ -248,6 +264,20 @@ struct ContentView: View {
 
             Toggle("Loop route", isOn: $engine.loop)
 
+            HStack(spacing: 10) {
+                Button {
+                    importRoute()
+                } label: {
+                    Label("Import", systemImage: "square.and.arrow.down")
+                }
+
+                Button {
+                    exportRoute()
+                } label: {
+                    Label("Export", systemImage: "square.and.arrow.up")
+                }
+            }
+
             // Transport controls
             HStack(spacing: 10) {
                 switch engine.playback {
@@ -328,6 +358,57 @@ struct ContentView: View {
                 Button("Reset device location") { sidecar.clearLocation(); engine.stop() }
                     .controlSize(.small)
             }
+        }
+    }
+
+    // MARK: - Route files
+
+    private func exportRoute() {
+        let panel = NSSavePanel()
+
+        panel.title = "Export Route"
+        panel.nameFieldStringValue = "route.json"
+        panel.allowedContentTypes = [.json]
+        panel.canCreateDirectories = true
+
+        guard panel.runModal() == .OK,
+            let url = panel.url
+        else {
+            return
+        }
+
+        do {
+            let data = try engine.exportRouteData()
+            try data.write(to: url, options: .atomic)
+        } catch {
+            routeFileError = error.localizedDescription
+        }
+    }
+
+    private func importRoute() {
+        let panel = NSOpenPanel()
+
+        panel.title = "Import Route"
+        panel.allowedContentTypes = [.json]
+        panel.allowsMultipleSelection = false
+        panel.canChooseDirectories = false
+        panel.canChooseFiles = true
+
+        guard panel.runModal() == .OK,
+            let url = panel.url
+        else {
+            return
+        }
+
+        do {
+            let data = try Data(contentsOf: url)
+            try engine.importRouteData(data)
+
+            if let first = engine.coordinates.first {
+                mapController.center(on: first)
+            }
+        } catch {
+            routeFileError = error.localizedDescription
         }
     }
 
