@@ -3,6 +3,12 @@
 All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.4.0] - 2026-11-21
+- Implemented smoothly-varying speed, now you can specify the range, the movement speed will smmothly vary in
+- Added convertion to Chinese coordinates system, before the coordinates were offset if you were
+  using Chinese maps provider (e.g. 高德地图)
+- Added importing/exporting waypoints history and settings to JSON file
+
 ## [0.3.0] - 2026-06-16
 
 ### Added
