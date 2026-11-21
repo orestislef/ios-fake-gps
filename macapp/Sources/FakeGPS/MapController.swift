@@ -8,11 +8,16 @@ import MapKit
 /// coordinator and only ever invoked on the main thread.
 final class MapController: ObservableObject {
     var recenter: ((CLLocationCoordinate2D, CLLocationDistance) -> Void)?
+    var recenterNoZoom: ((CLLocationCoordinate2D) -> Void)?
     var zoomBy: ((Double) -> Void)?
     var currentCenter: (() -> CLLocationCoordinate2D?)?
 
     func center(on coord: CLLocationCoordinate2D, meters: CLLocationDistance = 1_500) {
         recenter?(coord, meters)
+    }
+
+    func center(on coord: CLLocationCoordinate2D) {
+        recenterNoZoom?(coord)
     }
 
     func zoomIn() { zoomBy?(0.5) }

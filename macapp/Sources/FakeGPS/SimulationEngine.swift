@@ -250,6 +250,94 @@ final class SimulationEngine: ObservableObject {
         sendLocation(c)
     }
 
+    // MARK: - Route import / export
+
+    func exportRouteData() throws -> Data {
+        let route = SavedRoute(
+            points: waypoints.map {
+                SavedRoutePoint(
+                    latitude: $0.coordinate.latitude,
+                    longitude: $0.coordinate.longitude,
+                )
+            },
+            settings: SavedRouteSettings(
+                speedKmh: speedKmh,
+                speedVariationEnabled: speedVariationEnabled,
+                minSpeedKmh: minSpeedKmh,
+                maxSpeedKmh: maxSpeedKmh,
+                accelerationKmhPerSecond: accelerationKmhPerSecond,
+                loop: loop,
+                jitterMetres: jitterMetres
+            )
+        )
+
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [
+            .prettyPrinted,
+            .sortedKeys
+        ]
+
+        return try encoder.encode(route)
+    }
+
+
+    func importRouteData(_ data: Data) throws {
+        let route = try JSONDecoder().decode(
+            SavedRoute.self,
+            from: data
+        )
+
+        let newPoints = try route.points.map { point -> Waypoint in
+            let coordinate = CLLocationCoordinate2D(
+                latitude: point.latitude,
+                longitude: point.longitude
+            )
+
+            guard CLLocationCoordinate2DIsValid(coordinate) else {
+                throw RouteFileError.invalidCoordinate
+            }
+
+            return Waypoint(coordinate: coordinate)
+        }
+
+        let settings = route.settings
+
+        guard
+            settings.speedKmh.isFinite,
+            (1...300).contains(settings.speedKmh),
+
+            settings.minSpeedKmh.isFinite,
+            settings.maxSpeedKmh.isFinite,
+            (1...300).contains(settings.minSpeedKmh),
+            (1...300).contains(settings.maxSpeedKmh),
+            settings.minSpeedKmh <= settings.maxSpeedKmh,
+
+            settings.accelerationKmhPerSecond.isFinite,
+            (0.2...5).contains(
+                settings.accelerationKmhPerSecond
+            ),
+
+            settings.jitterMetres.isFinite,
+            (0...20).contains(settings.jitterMetres)
+        else {
+            throw RouteFileError.invalidSettings
+        }
+
+        waypoints = newPoints
+
+        speedKmh = settings.speedKmh
+        speedVariationEnabled = settings.speedVariationEnabled
+        minSpeedKmh = settings.minSpeedKmh
+        maxSpeedKmh = settings.maxSpeedKmh
+        accelerationKmhPerSecond =
+            settings.accelerationKmhPerSecond
+
+        loop = settings.loop
+        jitterMetres = settings.jitterMetres
+
+        resetSpeedVariation()
+    }
+
     // MARK: - Readouts
 
     var estimatedDurationSeconds: Double {
@@ -259,5 +347,39 @@ final class SimulationEngine: ObservableObject {
 
         let speedMps = effectiveSpeed / 3.6
         return speedMps > 0 ? totalDistance / speedMps : 0
+    }
+}
+
+struct SavedRoutePoint: Codable {
+    let latitude: Double
+    let longitude: Double
+}
+
+struct SavedRouteSettings: Codable {
+    let speedKmh: Double
+    let speedVariationEnabled: Bool
+    let minSpeedKmh: Double
+    let maxSpeedKmh: Double
+    let accelerationKmhPerSecond: Double
+    let loop: Bool
+    let jitterMetres: Double
+}
+
+struct SavedRoute: Codable {
+    let points: [SavedRoutePoint]
+    let settings: SavedRouteSettings
+}
+
+enum RouteFileError: LocalizedError {
+    case invalidCoordinate
+    case invalidSettings
+
+    var errorDescription: String? {
+        switch self {
+        case .invalidCoordinate:
+            return "Route contains invalid coordinates"
+        case .invalidSettings:
+            return "Route contains invalid settings"
+        }
     }
 }
