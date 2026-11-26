@@ -211,6 +211,9 @@ struct ContentView: View {
                         Text("Max").frame(width: 54, alignment: .leading)
 
                         Slider(value: $engine.maxSpeedKmh, in: 1...300)
+                            .onChange(of: engine.maxSpeedKmh) { _, newValue in
+                                engine.minSpeedKmh = min(engine.minSpeedKmh, newValue)
+                            }
 
                         Text("\(Int(engine.maxSpeedKmh)) km/h")
                             .monospacedDigit()
