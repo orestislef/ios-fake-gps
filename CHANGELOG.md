@@ -5,6 +5,7 @@ All notable changes to this project are documented here. The format is based on
 
 ## [0.4.1] - 2026-11-26
 - Added ability to copy current coordinates on clicking "Now" label
+- Remade app icon using native macOS Icon Composer app
 
 ## [0.4.0] - 2026-11-21
 - Implemented smoothly-varying speed, now you can specify the range, the movement speed will smmothly vary in
