@@ -3,6 +3,9 @@
 All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.4.1] - 2026-11-26
+- Added ability to copy current coordinates on clicking "Now" label
+
 ## [0.4.0] - 2026-11-21
 - Implemented smoothly-varying speed, now you can specify the range, the movement speed will smmothly vary in
 - Added convertion to Chinese coordinates system, before the coordinates were offset if you were
