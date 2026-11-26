@@ -26,8 +26,14 @@ enum PlaybackState: Equatable {
 @MainActor
 final class SimulationEngine: ObservableObject {
     @Published var waypoints: [Waypoint] = []
-    @Published private(set) var canUndo = false
-    @Published private(set) var canRedo = false
+
+    var canUndo: Bool {
+        !waypoints.isEmpty
+    }
+
+    var canRedo: Bool {
+        !redoStack.isEmpty
+    }
 
     private var redoStack: [Waypoint] = []
 
@@ -107,9 +113,6 @@ final class SimulationEngine: ObservableObject {
         }
 
         redoStack.append(previous)
-
-        canUndo = !waypoints.isEmpty
-        canRedo = true
     }
 
     func redo() {
@@ -118,9 +121,6 @@ final class SimulationEngine: ObservableObject {
         }
 
         waypoints.append(next)
-
-        canUndo = true
-        canRedo = !redoStack.isEmpty
     }
 
     // MARK: - Editing
@@ -128,9 +128,6 @@ final class SimulationEngine: ObservableObject {
     func addWaypoint(_ c: CLLocationCoordinate2D) {
         waypoints.append(Waypoint(coordinate: c))
         redoStack.removeAll()
-
-        canUndo = true
-        canRedo = false
     }
 
     func clearRoute() {
