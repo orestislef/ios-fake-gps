@@ -19,13 +19,15 @@
     {
       "layers" : [
         {
-          "image-name" : "Artboard 1@3x.png",
-          "name" : "Artboard 1@3x",
+          "glass" : true,
+          "hidden" : false,
+          "image-name" : "ios-fake-gps.svg",
+          "name" : "icon svg",
           "position" : {
-            "scale" : 0.35,
+            "scale" : 1.12,
             "translation-in-points" : [
               0,
-              64.04999999999995
+              23
             ]
           }
         }

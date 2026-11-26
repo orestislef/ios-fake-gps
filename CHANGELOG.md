@@ -3,6 +3,9 @@
 All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.4.2] - 2026-11-26
+- Reworked app icon so now it utilizes SVG instead of PNG
+
 ## [0.4.1] - 2026-11-26
 - Added ability to copy current coordinates on clicking "Now" label
 - Remade app icon using native macOS Icon Composer app
