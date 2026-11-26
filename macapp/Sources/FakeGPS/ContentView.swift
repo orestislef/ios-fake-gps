@@ -200,7 +200,7 @@ struct ContentView: View {
                         // I couldn't think of a good solution like ranged slider, so here are just 2 ones
                         // Make Min slider slidable upto max value and not 300m is more handful
                         // than stucking before Max slider value
-                        Slider(value: $engine.minSpeedKmh, in: 1...(engine.maxSpeedKmh - 1))
+                        Slider(value: $engine.minSpeedKmh, in: 1...max(1, engine.maxSpeedKmh - 1))
 
                         Text("\(Int(engine.minSpeedKmh)) km/h")
                             .monospacedDigit()
