@@ -329,8 +329,17 @@ struct ContentView: View {
             .font(.caption)
 
             if let c = engine.currentCoordinate {
-                Text(String(format: "Now: %.6f, %.6f", c.latitude, c.longitude))
+                let coordsText = String(format: "%.6f, %.6f", c.latitude, c.longitude)
+
+                Text("Now: \(coordsText)")
                     .font(.caption.monospaced())
+                    .onHover { $0 ? NSCursor.pointingHand.set() : NSCursor.arrow.set() }
+                    .onTapGesture {
+                        let pasteboard = NSPasteboard.general
+
+                        pasteboard.clearContents()
+                        pasteboard.setString(coordsText, forType: .string)
+                    }
             }
 
             HStack(spacing: 10) {
