@@ -62,7 +62,6 @@ xcrun actool "$REPO/assets/AppIcon.icon" \
   --platform macosx \
   --target-device mac \
   --minimum-deployment-target 14.0 \
-  --lightweight-asset-runtime-mode=enabled \
   --app-icon AppIcon \
   --output-partial-info-plist "$APP/Contents/icon-info.plist" \
   --output-format human-readable-text \
