@@ -75,6 +75,11 @@ struct MapView: NSViewRepresentable {
                     animated: true
                 )
             }
+            controller.recenterNoZoom = { [weak self] coord in
+                guard let map = self?.mapView else { return }
+
+                map.setCenter(coord, animated: true)
+            }
             controller.zoomBy = { [weak self] factor in
                 guard let map = self?.mapView else { return }
                 var region = map.region

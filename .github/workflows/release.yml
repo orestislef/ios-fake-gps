@@ -10,9 +10,14 @@ permissions:
 jobs:
   build-and-release:
     name: Build and attach app
-    runs-on: macos-14
+    runs-on: macos-26
     steps:
       - uses: actions/checkout@v4
+
+      - name: Select Xcode 26
+        run: |
+          sudo xcode-select -s /Applications/Xcode_26.3.app/Contents/Developer
+          xcodebuild -version
 
       - uses: actions/setup-python@v5
         with:

@@ -1,6 +1,8 @@
 import CoreLocation
 import MapKit
 import SwiftUI
+import AppKit
+import UniformTypeIdentifiers
 
 enum EditMode: String, CaseIterable, Identifiable {
     case teleport = "Teleport"
@@ -15,6 +17,7 @@ struct ContentView: View {
     @EnvironmentObject var tunnel: TunnelManager
 
     @State private var mode: EditMode = .route
+    @State private var routeFileError: String?
     @StateObject private var mapController = MapController()
     @StateObject private var search = PlaceSearch()
 
@@ -36,6 +39,19 @@ struct ContentView: View {
             }
         }
         .animation(.easeInOut(duration: 0.2), value: sidecar.state.isReady)
+        .alert(
+            "Route File Error",
+            isPresented: Binding(
+                get: { routeFileError != nil },
+                set: { if !$0 { routeFileError = nil } }
+            )
+        ) {
+            Button("OK", role: .cancel) {
+                routeFileError = nil
+            }
+        } message: {
+            Text(routeFileError ?? "Unknown error")
+        }
     }
 
     private var mapArea: some View {
@@ -171,10 +187,76 @@ struct ContentView: View {
 
     private var routeSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("Speed").frame(width: 54, alignment: .leading)
-                Slider(value: $engine.speedKmh, in: 1 ... 300)
-                Text("\(Int(engine.speedKmh)) km/h").monospacedDigit().frame(width: 70, alignment: .trailing)
+            VStack(alignment: .leading, spacing: 10) {
+                Toggle(
+                    "Speed variation",
+                    isOn: $engine.speedVariationEnabled
+                )
+
+                if engine.speedVariationEnabled {
+                    HStack {
+                        Text("Min").frame(width: 54, alignment: .leading)
+
+                        // I couldn't think of a good solution like ranged slider, so here are just 2 ones
+                        // Make Min slider slidable upto max value and not 300m is more handful
+                        // than stucking before Max slider value
+                        Slider(value: $engine.minSpeedKmh, in: 1...max(1, engine.maxSpeedKmh - 1))
+
+                        Text("\(Int(engine.minSpeedKmh)) km/h")
+                            .monospacedDigit()
+                            .frame(width: 70, alignment: .trailing)
+                    }
+
+                    HStack {
+                        Text("Max").frame(width: 54, alignment: .leading)
+
+                        Slider(value: $engine.maxSpeedKmh, in: 1...300)
+                            .onChange(of: engine.maxSpeedKmh) { _, newValue in
+                                engine.minSpeedKmh = min(engine.minSpeedKmh, newValue)
+                            }
+
+                        Text("\(Int(engine.maxSpeedKmh)) km/h")
+                            .monospacedDigit()
+                            .frame(width: 70, alignment: .trailing)
+                    }
+
+                    HStack {
+                        Text("Accel").frame(width: 54, alignment: .leading)
+
+                        Slider(
+                            value: $engine.accelerationKmhPerSecond,
+                            in: 0.2...5
+                        )
+
+                        Text(
+                            String(
+                                format: "%.1f",
+                                engine.accelerationKmhPerSecond
+                            )
+                        )
+                        .monospacedDigit()
+                        .frame(width: 70, alignment: .trailing)
+                    }
+
+                    if engine.playback != .idle {
+                        Text(
+                            "Current speed: \(Int(engine.actualSpeedKmh)) km/h"
+                        )
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    }
+                } else {
+                    HStack {
+                        Text("Speed")
+                            .frame(width: 54, alignment: .leading)
+
+                        Slider(value: $engine.speedKmh, in: 1...300)
+
+                        Text("\(Int(engine.speedKmh)) km/h")
+                            .monospacedDigit()
+                            .frame(width: 70, alignment: .trailing)
+                    }
+                }
             }
 
             HStack {
@@ -184,6 +266,20 @@ struct ContentView: View {
             }
 
             Toggle("Loop route", isOn: $engine.loop)
+
+            HStack(spacing: 10) {
+                Button {
+                    importRoute()
+                } label: {
+                    Label("Import", systemImage: "square.and.arrow.down")
+                }
+
+                Button {
+                    exportRoute()
+                } label: {
+                    Label("Export", systemImage: "square.and.arrow.up")
+                }
+            }
 
             // Transport controls
             HStack(spacing: 10) {
@@ -217,7 +313,11 @@ struct ContentView: View {
         VStack(alignment: .leading, spacing: 3) {
             Text("\(engine.waypoints.count) points · \(formatDistance(engine.totalDistance))")
             if engine.totalDistance > 0 {
-                Text("ETA \(formatDuration(engine.estimatedDurationSeconds)) at \(Int(engine.speedKmh)) km/h")
+                if engine.speedVariationEnabled {
+                    Text("ETA \(formatDuration(engine.estimatedDurationSeconds)) at \(Int(engine.minSpeedKmh))–\(Int(engine.maxSpeedKmh)) km/h")
+                } else {
+                    Text("ETA \(formatDuration(engine.estimatedDurationSeconds)) at \(Int(engine.speedKmh)) km/h")
+                }
             }
         }
         .font(.caption).foregroundStyle(.secondary)
@@ -225,10 +325,44 @@ struct ContentView: View {
 
     private var statusFooter: some View {
         VStack(alignment: .leading, spacing: 4) {
+            Toggle(
+                "China GPS correction (GCJ-02 → WGS-84)",
+                isOn: $engine.chinaCoordinateCorrection
+            )
+            .font(.caption)
+
             if let c = engine.currentCoordinate {
-                Text(String(format: "Now: %.6f, %.6f", c.latitude, c.longitude))
+                let coordsText = String(format: "%.6f, %.6f", c.latitude, c.longitude)
+
+                Text("Now: \(coordsText)")
                     .font(.caption.monospaced())
+                    .onHover { $0 ? NSCursor.pointingHand.set() : NSCursor.arrow.set() }
+                    .onTapGesture {
+                        let pasteboard = NSPasteboard.general
+
+                        pasteboard.clearContents()
+                        pasteboard.setString(coordsText, forType: .string)
+                    }
             }
+
+            HStack(spacing: 10) {
+                Button {
+                    engine.undo()
+                } label: {
+                    Label("Undo", systemImage: "arrow.uturn.backward")
+                }
+                .controlSize(.small)
+                .disabled(!engine.canUndo)
+
+                Button {
+                    engine.redo()
+                } label: {
+                    Label("Redo", systemImage: "arrow.uturn.forward")
+                }
+                .controlSize(.small)
+                .disabled(!engine.canRedo)
+            }
+
             if let err = sidecar.lastError, !sidecar.state.isFailed {
                 Text(err).font(.caption).foregroundStyle(.orange)
             }
@@ -236,6 +370,57 @@ struct ContentView: View {
                 Button("Reset device location") { sidecar.clearLocation(); engine.stop() }
                     .controlSize(.small)
             }
+        }
+    }
+
+    // MARK: - Route files
+
+    private func exportRoute() {
+        let panel = NSSavePanel()
+
+        panel.title = "Export Route"
+        panel.nameFieldStringValue = "route.json"
+        panel.allowedContentTypes = [.json]
+        panel.canCreateDirectories = true
+
+        guard panel.runModal() == .OK,
+            let url = panel.url
+        else {
+            return
+        }
+
+        do {
+            let data = try engine.exportRouteData()
+            try data.write(to: url, options: .atomic)
+        } catch {
+            routeFileError = error.localizedDescription
+        }
+    }
+
+    private func importRoute() {
+        let panel = NSOpenPanel()
+
+        panel.title = "Import Route"
+        panel.allowedContentTypes = [.json]
+        panel.allowsMultipleSelection = false
+        panel.canChooseDirectories = false
+        panel.canChooseFiles = true
+
+        guard panel.runModal() == .OK,
+            let url = panel.url
+        else {
+            return
+        }
+
+        do {
+            let data = try Data(contentsOf: url)
+            try engine.importRouteData(data)
+
+            if let first = engine.coordinates.first {
+                mapController.center(on: first)
+            }
+        } catch {
+            routeFileError = error.localizedDescription
         }
     }
 
